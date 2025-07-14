@@ -47,5 +47,24 @@ Currently supports two-way event creation, deletion, and updating.
 
 ## Development
 
+### Clasp
+
 [![clasp](https://img.shields.io/badge/built%20with-clasp-4285f4.svg)](https://github.com/google/clasp)
-This project is built using [clasp](https://github.com/google/clasp), Google's tool for developing Google Apps Script applications locally.
+
+This project can be built and deployed using [clasp](https://github.com/google/clasp), Google's tool for developing Google Apps Script applications locally. Be sure to follow the clasp usage guide to set up your project and prepare the necessary (but private) configuration files!
+
+To sync your local version of the script with your local development setup, you can use the included npm scripts `npm push`, `npm watch`, or `npm pull` as shortcuts for the corresponding clasp commands.
+
+### Private Configuration
+
+If you're developing locally, be sure not to commit any private Google Calendar data in [calendarIds.gs](src/calendarIds.gs)! To **locally** prevent any changes from being tracked by Git without removing the entire file from the repository, run the following command:
+
+```bash
+git update-index --assume-unchanged ./src/calendarIds.gs
+```
+
+Or to start tracking the file again:
+
+```bash
+git update-index --no-assume-unchanged ./src/calendarIds.gs
+```
