@@ -1,16 +1,16 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: ''
+title: ""
 labels: bug
-assignees: ''
-
+assignees: ""
 ---
 
-*Make Sure You Are On The Latest **Main Branch** Version Before Reporting A Bug!!!*
+_Make Sure You Are On The Latest **Main Branch** Version Before Reporting A Bug!!!_
 
 **Include the following information: **
-- *Date* of the latest commit OR *the commit ID* for the version of main.gs you are using. Top right corner above the code itself) [E.g. Jan 23 or 08f9caa]
+
+- _Date_ of the latest commit OR _the commit ID_ for the version of main.gs you are using. Top right corner above the code itself) [E.g. Jan 23 or 08f9caa]
 
 **Describe the bug**
 A clear and concise description of what the bug is.
