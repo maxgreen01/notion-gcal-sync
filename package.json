@@ -1,13 +1,24 @@
 {
-  "scripts": {
-    "push": "clasp push",
-    "watch": "clasp push --watch",
-    "pull": "clasp pull"
-  },
-  "devDependencies": {
-    "@types/google-apps-script": "^1.0.99"
-  },
-  "dependencies": {
-    "@google/clasp": "^3.0.6-alpha"
-  }
+    "license": "GPL-3.0-only",
+    "scripts": {
+        "push": "clasp push",
+        "watch": "clasp push --watch",
+        "pull": "clasp pull",
+        "prepare": "husky",
+        "lint-staged": "lint-staged"
+    },
+    "dependencies": {
+        "@google/clasp": "^3.0.6-alpha"
+    },
+    "devDependencies": {
+        "@types/google-apps-script": "^1.0.99",
+        "eslint": "^9.31.0",
+        "eslint-config-prettier": "^10.1.5",
+        "husky": "^9.1.7",
+        "lint-staged": "^16.1.2",
+        "prettier": "^3.6.2"
+    },
+    "lint-staged": {
+        "*": "prettier --write --ignore-unknown"
+    }
 }
