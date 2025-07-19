@@ -1,5 +1,8 @@
-# NPM
+# Dependency directories
 node_modules/
+
+# Local settings
+.vscode
 
 # Clasp private config files
 .clasp.json

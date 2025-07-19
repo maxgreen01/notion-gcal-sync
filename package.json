@@ -1,5 +1,8 @@
 {
-    "license": "GPL-3.0-only",
+    "name": "notion-gcal-sync",
+    "version": "1.0.0",
+    "description": "A Google Apps Script project for syncing Notion database entries with Google Calendar events in both directions.",
+    "main": "src/main.gs",
     "scripts": {
         "push": "clasp push",
         "watch": "clasp push --watch",
@@ -7,6 +10,7 @@
         "prepare": "husky",
         "lint-staged": "lint-staged"
     },
+    "license": "GPL-3.0-only",
     "dependencies": {
         "@google/clasp": "^3.0.6-alpha"
     },

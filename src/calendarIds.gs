@@ -1,4 +1,4 @@
-// Mapping from Notion "Calendar" field name to GCal IDs
+// Mapping from Google Calendar names (aka values in the Notion "Calendar" property) to corresponding Google Calendar IDs
 const CALENDAR_IDS = {
     /* Add calendars here. 
     The key (string before ':') is what you name the calendar. 
@@ -8,5 +8,5 @@ const CALENDAR_IDS = {
     ["Primary"]: "primary",
 };
 
-// The default calendar name that is used when the Notion property is empty.
-const DEFAULT_CALENDAR_NAME = "To-Do";
+// The default Google Calendar name that is used when the Notion property is empty
+const DEFAULT_CALENDAR_NAME = "Primary";
