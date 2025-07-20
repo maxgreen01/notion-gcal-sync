@@ -90,7 +90,7 @@ const DATABASE_URL_PROPERTY_SUFFIX = "DATABASE_URL";
 // ========== Script Internals & Implementation ==========
 //
 
-// The ID of the Notion DB that is currently being processed, as set in `parseNotionProperties()`.
+// The ID of the Notion database that is currently being processed, as set in `extractDatabaseId()`.
 let DATABASE_ID;
 
 // The key used for the Tag on all GCal events to store the Notion database ID that each event is associated with.
@@ -99,8 +99,7 @@ const GCAL_DB_TAG_KEY = "NotionDB";
 
 // API constants
 const MAX_PAGE_COUNT = 100; // The maximum number of pages to retrieve in a single Notion or Google Calendar API request
-const NOTION_API_URL = "https://api.notion.com/v1";
-let NOTION_TOKEN; // Set in `parseNotionProperties()`
+// other API constants are defined in `utils.gs`
 
 //
 // ~~~~~~~ Type definitions & aliases ~~~~~~~
@@ -111,14 +110,35 @@ let NOTION_TOKEN; // Set in `parseNotionProperties()`
  * @typedef {GoogleAppsScript.Calendar.CalendarEvent} CalendarEvent
  */
 
-// Appease ESLint
+// Appease ESLint by "importing" variables from other files
+
+// Global variables
 /* global CALENDAR_IDS, DEFAULT_CALENDAR_NAME */
+
+// Apps Script util functions
+/* global retrieveDatabaseKeys, extractDatabaseId */
+
+// Database util functions
+/* global getNotionHeaders, doesDatabaseHaveProperty, checkNotionProperties, getDatabaseQueryURL, getDatabaseURL, getPagesURL, getNotionParent */
+
+// Miscellaneous util functions
+/* global getRelativeDate, isPageUpdatedRecently, flattenRichText */
+
+// Error types
+/* global InvalidEventError, PageNotFoundError */
+
+// "Export" config variables
+/* exported DATABASE_URL_PROPERTY_SUFFIX */
+
+//
+
+//
 
 /**
  * Main driver function for the entire script during regular execution
  */
 function main() {
-    const databases = retrieveDatabaseURLs();
+    const databases = retrieveDatabaseKeys();
 
     // Repeat the syncing process for each detected database
     for (const db of databases) {
@@ -127,7 +147,7 @@ function main() {
         console.log(`Processing database with property key '${db}'`);
 
         // Set up the program to focus on this db
-        parseNotionProperties(db);
+        extractDatabaseId(db);
 
         // Remove events marked as DELETED in Notion from GCal (and potentially Notion)
         const deleted_eIds = processDeletedPages("deleted");
@@ -168,7 +188,7 @@ function main() {
 function fullSync() {
     console.log("Preforming full sync. Page token, time min, and time max will be reset.");
 
-    const databases = retrieveDatabaseURLs();
+    const databases = retrieveDatabaseKeys();
 
     // Repeat the syncing process for each detected database
     for (const db of databases) {
@@ -177,7 +197,7 @@ function fullSync() {
         console.log(`Processing database with property key '${db}'`);
 
         // Set up the program to focus on this db
-        parseNotionProperties(db);
+        extractDatabaseId(db);
 
         // Sync from GCal to Notion, unless this database disables this functionality
         if (DATABASES_IGNORING_GCAL_UPDATES.includes(db)) {
@@ -190,26 +210,6 @@ function fullSync() {
 
         console.log(`Finished processing database with property key '${db}'`);
     } // end of main processing loop
-}
-
-/**
- * Retrieves the URLs for each database stored in the script properties whose keys end with `DATABASE_URL_PROPERTY_SUFFIX`
- * @returns {string[]} Array of database URLs
- */
-/**
- * Retrieves the property keys for each Notion database stored in script properties whose keys end with `DATABASE_URL_PROPERTY_SUFFIX`.
- * @returns {string[]} Array of database property keys (not URLs)
- */
-function retrieveDatabaseURLs() {
-    const properties = PropertiesService.getScriptProperties();
-    const databases = [];
-    for (const key of properties.getKeys()) {
-        if (key.endsWith(DATABASE_URL_PROPERTY_SUFFIX)) {
-            console.log(`Found database with property key '${key}'`);
-            databases.push(key);
-        }
-    }
-    return databases;
 }
 
 /**
@@ -599,7 +599,7 @@ function createDatabaseEntry(event) {
 
     payload["properties"] = convertToNotionProperty(event);
 
-    if (!checkNotionProperty(payload["properties"])) {
+    if (!checkNotionProperties(payload["properties"])) {
         throw new InvalidEventError("Invalid Notion property structure");
     }
 
@@ -611,22 +611,6 @@ function createDatabaseEntry(event) {
         payload: JSON.stringify(payload),
     };
     return options;
-}
-
-/**
- * Checks if the provided Notion properties object is valid for Notion API.
- * Currently checks if the description is too long.
- * @param {*} properties - Properties object to check
- * @returns {boolean} True if valid, false if invalid
- */
-function checkNotionProperty(properties) {
-    // Check if description is too long
-    if (properties[DESCRIPTION_NOTION].rich_text[0].text.content.length > 2000) {
-        console.warn("Event description is too long.");
-        return false;
-    }
-
-    return true;
 }
 
 /**
@@ -719,71 +703,6 @@ function notionFetch(url, payload_dict, method = "POST") {
     } else {
         throw new Error(response.getContentText());
     }
-}
-
-/**
- * Returns the headers required for Notion API requests, including authorization and version.
- * @returns {Object} Headers object
- */
-function getNotionHeaders() {
-    return {
-        Authorization: `Bearer ${NOTION_TOKEN}`,
-        Accept: "application/json",
-        "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json",
-    };
-}
-
-/**
- * Returns the Notion API URL for querying the current database.
- * @returns {string} Query URL
- */
-function getDatabaseQueryURL() {
-    return `${getDatabaseURL()}/query`;
-}
-
-/**
- * Returns the base Notion API URL for working with the current database.
- * @returns {string} Database URL
- */
-function getDatabaseURL() {
-    return `${NOTION_API_URL}/databases/${DATABASE_ID}`;
-}
-
-/**
- * Returns the base Notion API URL for working with individual pages.
- * @returns {string} Pages URL
- */
-function getPagesURL() {
-    return `${NOTION_API_URL}/pages`;
-}
-
-/**
- * Returns the Notion parent object representing the current database.
- * See https://developers.notion.com/reference/parent-object for more details.
- * @returns {Object} Notion parent object
- */
-function getNotionParent() {
-    return {
-        type: "database_id",
-        database_id: DATABASE_ID,
-    };
-}
-
-/**
- * Returns a Date object that is offset from the current date and set exactly to a specific hour.
- * @param {number} daysOffset - Number of days to offset from today
- * @param {number} hour - Hour to set for the date
- * @returns {Date} Adjusted Date object
- */
-function getRelativeDate(daysOffset, hour) {
-    let date = new Date();
-    date.setDate(date.getDate() + daysOffset);
-    date.setHours(hour);
-    date.setMinutes(0);
-    date.setSeconds(0);
-    date.setMilliseconds(0);
-    return date;
 }
 
 /**
@@ -935,24 +854,6 @@ function getBaseNotionProperties(event_id, calendar_name) {
     };
 }
 
-// "Store" of Notion database properties, with keys corresponding to Notion database IDs
-// and values being the properties objects returned by the Notion API.
-const DATABASE_PROPERTIES_STORE = {};
-
-/**
- * Checks whether the current Notion database contains a property with the given name.
- * @param {string} property_name - The name of the property to check for
- * @returns {boolean} True if the property exists, false otherwise
- */
-function doesDatabaseHaveProperty(property_name) {
-    if (typeof DATABASE_PROPERTIES_STORE[DATABASE_ID] === "undefined") {
-        // Fetch the database properties because they haven't been stored yet
-        const response_data = notionFetch(getDatabaseURL(), null, "GET");
-        DATABASE_PROPERTIES_STORE[DATABASE_ID] = response_data.properties;
-    }
-    return !!DATABASE_PROPERTIES_STORE[DATABASE_ID][property_name];
-}
-
 /**
  * Converts a Notion page object into an object representing a Google Calendar event.
  * @param {Object} page_result - Notion page result object
@@ -1009,23 +910,6 @@ function convertToGCalEvent(page_result) {
         return event;
     } else {
         return undefined; // No date property found, so return undefined
-    }
-}
-
-/**
- * Parses Notion information (API token & database ID) from script properties and assigns them to global variables.
- * @param {string} database_key - The key for the script property storing the current database's URL
- */
-function parseNotionProperties(database_key) {
-    const properties = PropertiesService.getScriptProperties();
-    NOTION_TOKEN = properties.getProperty("NOTION_TOKEN");
-
-    // Detect the database ID, which is a 32-character hexadecimal string after the `notion.so/` part of the URL
-    const databaseIdRegex = /\bnotion\.so\/([a-f0-9]{32})\b/i;
-    const matches = properties.getProperty(database_key).match(databaseIdRegex);
-    DATABASE_ID = matches?.[1];
-    if (!DATABASE_ID) {
-        throw new Error(`Database ID not found in script property "${database_key}"! Ensure that the Notion URL is formatted correctly!`);
     }
 }
 
@@ -1188,31 +1072,6 @@ function deleteEvent(event_id, calendar_id) {
 }
 
 /**
- * Determines if a Notion page result has been updated since the last recorded sync.
- * @param {Object} page_result - Page result from Notion database
- * @returns {boolean} True if page has been updated recently, false otherwise
- */
-function isPageUpdatedRecently(page_result) {
-    let last_sync_date = page_result.properties[LAST_SYNC_NOTION];
-    last_sync_date = last_sync_date.date ? last_sync_date.date.start : 0;
-
-    return new Date(last_sync_date) < new Date(page_result.last_edited_time);
-}
-
-/**
- * Flattens a Notion rich text property into a singular string.
- * @param {Object} rich_text_result - Rich text property to flatten
- * @returns {string} Flattened rich text string
- */
-function flattenRichText(rich_text_result) {
-    let plain_text = "";
-    for (let i = 0; i < rich_text_result.length; i++) {
-        plain_text += rich_text_result[i].rich_text?.plain_text || rich_text_result[i].plain_text;
-    }
-    return plain_text;
-}
-
-/**
  * Creates a new event in Google Calendar based on an object describing it (usually from `convertToGCalEvent`).
  * Also tags the event to indicate which Notion DB the event belongs to, and saves the new event properties to the Notion page.
  * @param {Object} page - Notion page object from the database
@@ -1305,28 +1164,5 @@ function pushEventUpdate(event, event_id, calendar_id, page_id) {
     } catch (e) {
         console.error("[+GCal] Failed to push event update to GCal.", e);
         return false;
-    }
-}
-
-/**
- * Error thrown when an event is invalid and cannot be pushed to either Google Calendar or Notion.
- */
-class InvalidEventError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = this.constructor.name;
-    }
-}
-
-/**
- * Error thrown when the page corresponding to a Google Calendar event ID is not found in the Notion database.
- * Not always harmful depending on the context.
- * @param {string} message - Error message
- * @param {string} eventId - Event ID of the page that was not found
- */
-class PageNotFoundError extends Error {
-    constructor(message, eventId) {
-        super(`${message}. Event ID: "${eventId}"`);
-        this.name = this.constructor.name;
     }
 }

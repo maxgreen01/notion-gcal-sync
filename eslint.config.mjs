@@ -24,8 +24,6 @@ export default [
             globals: {
                 ...globals.node,
                 ...eslintPluginGoogleAppsScript.environments.googleappsscript.globals,
-
-                // script globals
             },
         },
     },
