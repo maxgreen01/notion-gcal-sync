@@ -1,3 +1,5 @@
+/* exported CALENDAR_IDS, DEFAULT_CALENDAR_NAME */
+
 // Mapping from Google Calendar names (aka values in the Notion "Calendar" property) to corresponding Google Calendar IDs
 const CALENDAR_IDS = {
     /* Add calendars here. 

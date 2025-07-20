@@ -18,6 +18,7 @@
         "@types/google-apps-script": "^1.0.99",
         "eslint": "^9.31.0",
         "eslint-config-prettier": "^10.1.5",
+        "eslint-plugin-googleappsscript": "^1.0.5",
         "husky": "^9.1.7",
         "lint-staged": "^16.1.2",
         "prettier": "^3.6.2"
