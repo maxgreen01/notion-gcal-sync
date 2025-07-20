@@ -28,7 +28,7 @@ function retrieveDatabaseKeys() {
 
 /**
  * Extracts a database ID from the script properties using its property key, and assigns it to `DATABASE_ID`.
- * @param {string} database_key - The key for the script property storing the current database's URL
+ * @param {string} database_key - The key for the script property storing the current Notion database URL
  */
 /* exported extractDatabaseId */
 function extractDatabaseId(database_key) {
@@ -36,7 +36,7 @@ function extractDatabaseId(database_key) {
 
     // Detect the database ID, which is a 32-character hexadecimal string after the `notion.so/` part of the URL
     const databaseIdRegex = /\bnotion\.so\/([a-f0-9]{32})\b/i;
-    const matches = properties.getProperty(database_key).match(databaseIdRegex);
+    const matches = properties.getProperty(database_key)?.match(databaseIdRegex);
     DATABASE_ID = matches?.[1];
     if (!DATABASE_ID) {
         throw new Error(`Database ID not found in script property "${database_key}"! Ensure that the Notion URL is formatted correctly!`);
@@ -60,7 +60,7 @@ function retrieveNotionToken() {
     const properties = PropertiesService.getScriptProperties();
     NOTION_TOKEN = properties.getProperty("NOTION_TOKEN");
     if (!NOTION_TOKEN) {
-        throw new Error("Notion API token is not set.");
+        throw new Error("Notion API token is not set in script properties.");
     }
 }
 
@@ -109,7 +109,7 @@ function doesDatabaseHaveProperty(property_name) {
 /* exported checkNotionProperties */
 function checkNotionProperties(properties) {
     // Check if description is too long
-    if (properties[DESCRIPTION_NOTION].rich_text[0].text.content.length > 2000) {
+    if (properties[DESCRIPTION_NOTION]?.rich_text?.[0]?.text?.content.length > 2000) {
         console.warn("Event description is too long.");
         return false;
     }
@@ -171,7 +171,7 @@ function getNotionParent() {
  */
 /* exported getRelativeDate */
 function getRelativeDate(daysOffset, hour) {
-    let date = new Date();
+    const date = new Date();
     date.setDate(date.getDate() + daysOffset);
     date.setHours(hour);
     date.setMinutes(0);
@@ -187,22 +187,25 @@ function getRelativeDate(daysOffset, hour) {
  */
 /* exported isPageUpdatedRecently */
 function isPageUpdatedRecently(page_result) {
-    let last_sync_date = page_result.properties[LAST_SYNC_NOTION];
-    last_sync_date = last_sync_date.date ? last_sync_date.date.start : 0;
+    const last_sync_date = page_result.properties[LAST_SYNC_NOTION]?.date?.start ?? 0;
 
     return new Date(last_sync_date) < new Date(page_result.last_edited_time);
 }
 
 /**
  * Flattens a Notion rich text property into a singular string.
- * @param {Object} rich_text_result - Rich text property to flatten
+ * @param {Object} rich_text - Rich text property to flatten
  * @returns {string} Flattened rich text string
  */
 /* exported flattenRichText */
-function flattenRichText(rich_text_result) {
+function flattenRichText(rich_text) {
+    if (!Array.isArray(rich_text)) {
+        return "";
+    }
+
     let plain_text = "";
-    for (let i = 0; i < rich_text_result.length; i++) {
-        plain_text += rich_text_result[i].rich_text?.plain_text || rich_text_result[i].plain_text;
+    for (const block of rich_text) {
+        plain_text += block.rich_text?.plain_text ?? block.plain_text;
     }
     return plain_text;
 }
